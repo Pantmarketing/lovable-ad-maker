@@ -6,6 +6,9 @@ import { ExternalLink, Code2 } from "lucide-react";
 interface PreviewCardProps {
   size: string;
   html: string;
+  selected?: boolean;
+  onSelect?: () => void;
+  onRemove?: () => void;
 }
 
 /**
@@ -13,7 +16,7 @@ interface PreviewCardProps {
  * The iframe is scaled using a wrapper so the internal
  * HTML remains untouched.
  */
-export function PreviewCard({ size, html }: PreviewCardProps) {
+export function PreviewCard({ size, html, selected, onSelect, onRemove }: PreviewCardProps) {
   const [width, height] = size.split("x").map(Number);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -39,7 +42,7 @@ export function PreviewCard({ size, html }: PreviewCardProps) {
   };
 
   return (
-    <Card className="shadow-elegant">
+    <Card className={`shadow-elegant ${selected ? 'ring-2 ring-primary' : ''}`} onClick={onSelect} role="button" tabIndex={0}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium">{size}</CardTitle>
         <div className="flex gap-2">
@@ -47,6 +50,9 @@ export function PreviewCard({ size, html }: PreviewCardProps) {
             <ExternalLink className="w-4 h-4" />
             Abrir em Nova Janela
           </Button>
+          {onRemove && (
+            <Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); onRemove(); }}>Remover</Button>
+          )}
           <Button
             variant="ghost"
             size="xs"
