@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Download, ExternalLink, Code2, FileImage, Code } from "lucide-react";
+import { ArrowLeft, Download, FileImage, Code } from "lucide-react";
 import type { PlannerInput } from "@/types/banner";
+import { PreviewCard } from "./PreviewCard";
 
 interface BannerPreviewProps {
   banners: Record<string, string>;
@@ -16,14 +17,6 @@ interface BannerPreviewProps {
 }
 
 export function BannerPreview({ banners, formData, onBack, onExport, exportMode, onExportModeChange }: BannerPreviewProps) {
-  const openPreview = (html: string) => {
-    const newWindow = window.open();
-    if (newWindow) {
-      newWindow.document.write(html);
-      newWindow.document.close();
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -46,76 +39,9 @@ export function BannerPreview({ banners, formData, onBack, onExport, exportMode,
       </div>
 
       <div className="grid gap-6">
-        {Object.entries(banners).map(([size, html]) => {
-          const [width, height] = size.split('x').map(Number);
-          
-          return (
-            <Card key={size} className="shadow-elegant">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{size}</CardTitle>
-                    <CardDescription>
-                      {width} × {height} pixels
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Badge variant="secondary">HTML5</Badge>
-                    <Badge variant="outline">Otimizado</Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4 bg-muted/10">
-                  <div className="flex items-center justify-center min-h-[120px]">
-                    <div 
-                      className="border border-border bg-white rounded shadow-sm overflow-hidden"
-                      style={{ 
-                        width: Math.min(width, 400), 
-                        height: Math.min(height, 300),
-                        transform: width > 400 || height > 300 ? 'scale(0.8)' : 'scale(1)',
-                        transformOrigin: 'center'
-                      }}
-                    >
-                      <iframe
-                        srcDoc={html}
-                        width={width}
-                        height={height}
-                        style={{ 
-                          width: width, 
-                          height: height, 
-                          border: 'none',
-                          pointerEvents: 'none'
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => openPreview(html)}
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    Abrir em Nova Janela
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(html);
-                    }}
-                  >
-                    <Code2 className="w-4 h-4" />
-                    Copiar HTML
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {Object.entries(banners).map(([size, html]) => (
+          <PreviewCard key={size} size={size} html={html} />
+        ))}
       </div>
 
       <Card className="bg-gradient-subtle border-primary/20">
