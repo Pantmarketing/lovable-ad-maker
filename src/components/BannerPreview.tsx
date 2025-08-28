@@ -1,7 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, ExternalLink, Code2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Download, ExternalLink, Code2, FileImage, Code } from "lucide-react";
 import type { PlannerInput } from "@/types/banner";
 
 interface BannerPreviewProps {
@@ -9,9 +11,11 @@ interface BannerPreviewProps {
   formData: PlannerInput;
   onBack: () => void;
   onExport: () => void;
+  exportMode: "html" | "jpg" | "both";
+  onExportModeChange: (mode: "html" | "jpg" | "both") => void;
 }
 
-export function BannerPreview({ banners, formData, onBack, onExport }: BannerPreviewProps) {
+export function BannerPreview({ banners, formData, onBack, onExport, exportMode, onExportModeChange }: BannerPreviewProps) {
   const openPreview = (html: string) => {
     const newWindow = window.open();
     if (newWindow) {
@@ -116,16 +120,79 @@ export function BannerPreview({ banners, formData, onBack, onExport }: BannerPre
 
       <Card className="bg-gradient-subtle border-primary/20">
         <CardContent className="p-6">
-          <div className="text-center space-y-2">
-            <h3 className="font-semibold">Próximos Passos</h3>
-            <p className="text-sm text-muted-foreground">
-              Após exportar, você pode fazer upload dos banners diretamente no Google Ads. 
-              Cada tamanho está otimizado para maximum performance e compliance.
-            </p>
-            <Button variant="creative" size="lg" onClick={onExport} className="mt-4">
-              <Download className="w-4 h-4" />
-              Exportar Todos os Banners
-            </Button>
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="font-semibold mb-2">Opções de Exportação</h3>
+              <p className="text-sm text-muted-foreground">
+                Escolha o formato dos arquivos que deseja baixar
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div 
+                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  exportMode === "html" || exportMode === "both" 
+                    ? "border-primary bg-primary/5" 
+                    : "border-muted hover:border-primary/50"
+                }`}
+                onClick={() => onExportModeChange(exportMode === "html" ? "both" : "html")}
+              >
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    checked={exportMode === "html" || exportMode === "both"}
+                    onChange={() => {}}
+                  />
+                  <Code className="w-5 h-5 text-primary" />
+                  <div>
+                    <div className="font-medium">ZIP HTML5</div>
+                    <div className="text-sm text-muted-foreground">
+                      Banners interativos para Google Ads
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div 
+                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  exportMode === "jpg" || exportMode === "both" 
+                    ? "border-primary bg-primary/5" 
+                    : "border-muted hover:border-primary/50"
+                }`}
+                onClick={() => onExportModeChange(exportMode === "jpg" ? "both" : "jpg")}
+              >
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    checked={exportMode === "jpg" || exportMode === "both"}
+                    onChange={() => {}}
+                  />
+                  <FileImage className="w-5 h-5 text-primary" />
+                  <div>
+                    <div className="font-medium">JPG Estático</div>
+                    <div className="text-sm text-muted-foreground">
+                      Imagens para redes sociais e impressão
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-4">
+                Após exportar, você pode fazer upload dos banners diretamente no Google Ads. 
+                Cada tamanho está otimizado para máxima performance e compliance.
+              </p>
+              <Button 
+                variant="creative" 
+                size="lg" 
+                onClick={onExport}
+                disabled={exportMode === "both" ? false : !exportMode}
+              >
+                <Download className="w-4 h-4" />
+                {exportMode === "both" ? "Exportar Ambos" : 
+                 exportMode === "html" ? "Exportar HTML5" : 
+                 exportMode === "jpg" ? "Exportar JPG" : "Selecione um Formato"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

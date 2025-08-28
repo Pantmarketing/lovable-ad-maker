@@ -7,6 +7,7 @@ export interface PlannerInput {
   tamanhos: BannerSize[];
   paletaPreferida?: { primary?: string; secondary?: string; bg?: string };
   clickTag: string;
+  mode?: "datas" | "limite"; // tipo de interação visual
 }
 
 export interface PlannerOutput {

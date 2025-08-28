@@ -14,6 +14,8 @@ import { BannerSizeSelector } from "./BannerSizeSelector";
 import { ColorPalettePicker } from "./ColorPalettePicker";
 import { BannerPreview } from "./BannerPreview";
 import type { PlannerInput, BannerSize } from "@/types/banner";
+import { buildBannerHTML, type BannerBuildInput } from "@/lib/bannerBuilder";
+import { exportHTMLZip, exportStaticJPG, downloadFile } from "@/lib/exportService";
 
 const TONE_OPTIONS = [
   { value: "direto", label: "Direto", description: "Tom objetivo e claro", icon: Target },
@@ -38,6 +40,8 @@ export function BannerGenerator() {
     clickTag: "",
   });
 
+  const [exportMode, setExportMode] = useState<"html" | "jpg" | "both">("html");
+
   const handleGenerate = async () => {
     if (!formData.nicho || !formData.proposta || !formData.tom || formData.tamanhos.length === 0) {
       toast({
@@ -50,16 +54,37 @@ export function BannerGenerator() {
 
     setIsGenerating(true);
     try {
-      // Simular geração por agora
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Generate banners using the new builder
+      const generatedBanners: Record<string, string> = {};
       
-      // Mock banners gerados
-      const mockBanners: Record<string, string> = {};
+      const palette = {
+        primary: formData.paletaPreferida?.primary || '#E53935',
+        secondary: formData.paletaPreferida?.secondary || '#666666',
+        bg: formData.paletaPreferida?.bg || '#FFFFFF'
+      };
+      
       formData.tamanhos.forEach(size => {
-        mockBanners[size] = `<html><head><meta name="ad.size" content="width=${size.split('x')[0]},height=${size.split('x')[1]}"><style>body{margin:0;padding:20px;background:${formData.paletaPreferida?.bg || '#f8fafc'};font-family:Arial;display:flex;flex-direction:column;justify-content:center;align-items:center;height:${size.split('x')[1]}px;box-sizing:border-box;cursor:pointer;}</style></head><body onclick="window.open(window.clickTag || 'https://example.com', '_blank');"><h1 style="color:${formData.paletaPreferida?.primary || '#6366f1'};margin:0;font-size:18px;text-align:center;">${formData.proposta}</h1><button style="background:${formData.paletaPreferida?.secondary || '#8b5cf6'};color:white;border:none;padding:8px 16px;border-radius:4px;margin-top:10px;cursor:pointer;">Saiba Mais</button><script>window.clickTag = "${formData.clickTag || 'https://example.com'}";</script></body></html>`;
+        const [width, height] = size.split('x').map(Number);
+        
+        const bannerInput: BannerBuildInput = {
+          width,
+          height,
+          headline: formData.proposta.slice(0, width <= 320 ? 18 : 36),
+          sub: width <= 320 ? undefined : `Aproveite as melhores condições do ${formData.nicho}`,
+          cta: "FAÇA O TESTE",
+          mode: formData.nicho.toLowerCase().includes('cartão') || formData.nicho.toLowerCase().includes('crédit') ? "limite" : "datas",
+          palette,
+          clickTag: formData.clickTag || 'https://example.com',
+          overrides: {
+            hide_sub: width <= 320,
+            cta_compact: width <= 320
+          }
+        };
+        
+        generatedBanners[size] = buildBannerHTML(bannerInput);
       });
       
-      setGeneratedBanners(mockBanners);
+      setGeneratedBanners(generatedBanners);
       setCurrentStep("preview");
       
       toast({
@@ -78,13 +103,52 @@ export function BannerGenerator() {
   };
 
   const handleExport = async () => {
-    toast({
-      title: "Download iniciado",
-      description: "Seu arquivo ZIP com os banners está sendo preparado...",
-    });
-    
-    // TODO: Implementar download real do ZIP
-    setCurrentStep("export");
+    try {
+      const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, '');
+      
+      if (exportMode === "html" || exportMode === "both") {
+        toast({
+          title: "Exportando HTML5",
+          description: "Preparando arquivo ZIP com banners HTML5...",
+        });
+        
+        const htmlZip = await exportHTMLZip(generatedBanners);
+        downloadFile(htmlZip, `banners-html5-${timestamp}.zip`);
+      }
+      
+      if (exportMode === "jpg" || exportMode === "both") {
+        toast({
+          title: "Exportando JPG",
+          description: "Gerando imagens estáticas...",
+        });
+        
+        try {
+          const jpgZip = await exportStaticJPG({
+            htmlBySize: generatedBanners,
+            background: formData.paletaPreferida?.bg || '#FFFFFF',
+            quality: 0.92
+          });
+          downloadFile(jpgZip, `banners-static-${timestamp}.zip`);
+        } catch (error) {
+          toast({
+            title: "Erro na exportação JPG",
+            description: "Usando HTML5 como fallback. Para JPG, configure o servidor.",
+            variant: "destructive",
+          });
+          // Fallback to HTML export
+          const htmlZip = await exportHTMLZip(generatedBanners);
+          downloadFile(htmlZip, `banners-html5-${timestamp}.zip`);
+        }
+      }
+      
+      setCurrentStep("export");
+    } catch (error) {
+      toast({
+        title: "Erro na exportação",
+        description: "Ocorreu um erro ao exportar os banners. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const updateFormData = (field: keyof PlannerInput, value: any) => {
@@ -153,15 +217,30 @@ export function BannerGenerator() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nicho">Nicho / Segmento *</Label>
-                    <Input
-                      id="nicho"
-                      placeholder="Ex: E-commerce, SaaS, Educação, Saúde..."
-                      value={formData.nicho}
-                      onChange={(e) => updateFormData("nicho", e.target.value)}
-                    />
-                  </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="nicho">Nicho / Segmento *</Label>
+                     <Input
+                       id="nicho"
+                       placeholder="Ex: Cartão de Crédito, E-commerce, SaaS, Educação..."
+                       value={formData.nicho}
+                       onChange={(e) => updateFormData("nicho", e.target.value)}
+                     />
+                     <div className="flex gap-2 mt-2">
+                       <Button
+                         type="button"
+                         variant="outline"
+                         size="sm"
+                         onClick={() => {
+                           updateFormData("nicho", "Cartão de Crédito");
+                           updateFormData("proposta", "Cartão disponível para negativados - Escolha a data do vencimento");
+                           updateFormData("tom", "urgente");
+                           updateFormData("clickTag", "https://exemplo.com/cartao-credito");
+                         }}
+                       >
+                         Exemplo: Cartão de Crédito
+                       </Button>
+                     </div>
+                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="proposta">Proposta de Valor *</Label>
@@ -292,6 +371,8 @@ export function BannerGenerator() {
             formData={formData}
             onBack={() => setCurrentStep("config")}
             onExport={handleExport}
+            exportMode={exportMode}
+            onExportModeChange={setExportMode}
           />
         )}
 
