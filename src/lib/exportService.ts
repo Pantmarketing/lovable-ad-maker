@@ -7,19 +7,25 @@ export interface ExportOptions {
 }
 
 export async function exportHTMLZip(htmlBySize: Record<string, string>): Promise<Blob> {
+  // Prefer hitting server endpoint for streaming zip when available
+  try {
+    const response = await fetch('/api/export-zip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ htmlBySize })
+    });
+    if (response.ok) return await response.blob();
+  } catch {}
+  // Fallback to client-side zip
   const zip = new JSZip();
-  
   Object.entries(htmlBySize).forEach(([size, html]) => {
     const folder = zip.folder(size) as JSZip;
     folder.file("index.html", html);
-    
-    // Add placeholder assets
     const assetsFolder = folder.folder("assets") as JSZip;
     assetsFolder.file("logo.png", "", { binary: true });
     assetsFolder.file("bg.jpg", "", { binary: true });
   });
-  
-  return await zip.generateAsync({ type: "blob" });
+  return await zip.generateAsync({ type: 'blob' });
 }
 
 export async function exportStaticJPG(options: ExportOptions): Promise<Blob> {
