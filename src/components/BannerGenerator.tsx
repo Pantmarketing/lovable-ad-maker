@@ -16,6 +16,7 @@ import { BannerPreview } from "./BannerPreview";
 import type { PlannerInput, BannerSize } from "@/types/banner";
 import { buildBannerHTML, type BannerBuildInput } from "@/lib/bannerBuilder";
 import { exportHTMLZip, exportStaticJPG, downloadFile } from "@/lib/exportService";
+import { autoFitHeadline, autoFitSub } from "@/lib/utils";
 
 const TONE_OPTIONS = [
   { value: "direto", label: "Direto", description: "Tom objetivo e claro", icon: Target },
@@ -64,23 +65,32 @@ export function BannerGenerator() {
       };
       
       formData.tamanhos.forEach(size => {
-        const [width, height] = size.split('x').map(Number);
-        
+        const [width, height] = size.split("x").map(Number);
+
+        const { text: fittedHeadline, adjust } = autoFitHeadline(size, formData.proposta);
+        let subText = width <= 320 ? undefined : `Aproveite as melhores condições do ${formData.nicho}`;
+        if (subText) subText = autoFitSub(size, subText);
+
         const bannerInput: BannerBuildInput = {
           width,
           height,
-          headline: formData.proposta.slice(0, width <= 320 ? 18 : 36),
-          sub: width <= 320 ? undefined : `Aproveite as melhores condições do ${formData.nicho}`,
+          headline: fittedHeadline,
+          sub: subText,
           cta: "FAÇA O TESTE",
-          mode: formData.nicho.toLowerCase().includes('cartão') || formData.nicho.toLowerCase().includes('crédit') ? "limite" : "datas",
+          mode:
+            formData.nicho.toLowerCase().includes("cartão") ||
+            formData.nicho.toLowerCase().includes("crédit")
+              ? "limite"
+              : "datas",
           palette,
-          clickTag: formData.clickTag || 'https://example.com',
+          clickTag: formData.clickTag || "https://example.com",
           overrides: {
-            hide_sub: width <= 320,
-            cta_compact: width <= 320
-          }
+            hide_sub: width === 320 && height === 50,
+            cta_compact: width === 320 && height === 50,
+            fontAdjust: adjust,
+          },
         };
-        
+
         generatedBanners[size] = buildBannerHTML(bannerInput);
       });
       
